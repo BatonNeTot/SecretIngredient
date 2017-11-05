@@ -134,7 +134,7 @@ public class Recipe {
     }
 
     public static SecretKey createAESKey(@NotNull final byte[] key) {
-        return new SecretKeySpec(key, RSA_SHORT);
+        return new SecretKeySpec(key, AES_SHORT);
     }
 
     public static byte[] encryptAES(@NotNull final Key key, @NotNull final byte[] message) {
