@@ -16,11 +16,12 @@ public class Recipe {
     private static final String RSA_SHORT = "RSA";
     private static final String AES_SHORT = "AES";
 
+    public static final int RSA_KEY_SIZE = 2048;
+
     public static KeyPair generateRSAPair() {
-        final int size = 2048;
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA_SHORT);
-            keyPairGenerator.initialize(size);
+            keyPairGenerator.initialize(RSA_KEY_SIZE);
             return keyPairGenerator.genKeyPair();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
@@ -47,35 +48,38 @@ public class Recipe {
         }
     }
 
+    public static final int RSA_DECRYPTED_BLOCK_SIZE = 245;
+    public static final int RSA_ENCRYPTED_BLOCK_SIZE = 256;
+
     public static byte[] encryptRSA(@NotNull final Key key, @NotNull final byte[] message) {
         try {
             final Cipher cipher = Cipher.getInstance(RSA);
             cipher.init(Cipher.ENCRYPT_MODE, key);
 
-            if (message.length <= 245) {
+            if (message.length <= RSA_DECRYPTED_BLOCK_SIZE) {
                 return cipher.doFinal(message);
             } else {
 
-                final int count = message.length / 245 + (message.length % 245 != 0 ? 1 : 0);
+                final int count = (message.length + RSA_DECRYPTED_BLOCK_SIZE - 1) / RSA_DECRYPTED_BLOCK_SIZE;
 
-                final byte[] result = new byte[count * 256];
+                final byte[] result = new byte[count * RSA_ENCRYPTED_BLOCK_SIZE];
 
                 final int taillessCount = count - 1;
 
-                final byte[] tmp = new byte[245];
+                final byte[] tmp = new byte[RSA_DECRYPTED_BLOCK_SIZE];
 
-                System.arraycopy(message, 0, tmp, 0, 245);
-                System.arraycopy(cipher.doFinal(tmp), 0, result, 0, 256);
+                System.arraycopy(message, 0, tmp, 0, RSA_DECRYPTED_BLOCK_SIZE);
+                System.arraycopy(cipher.doFinal(tmp), 0, result, 0, RSA_ENCRYPTED_BLOCK_SIZE);
 
                 for (int i = 1; i < taillessCount; i++) {
-                    System.arraycopy(message, i * 245, tmp, 0, 245);
-                    System.arraycopy(cipher.doFinal(tmp), 0, result, i * 256, 256);
+                    System.arraycopy(message, i * RSA_DECRYPTED_BLOCK_SIZE, tmp, 0, RSA_DECRYPTED_BLOCK_SIZE);
+                    System.arraycopy(cipher.doFinal(tmp), 0, result, i * RSA_ENCRYPTED_BLOCK_SIZE, RSA_ENCRYPTED_BLOCK_SIZE);
                 }
 
-                final int mass = taillessCount * 245;
+                final int mass = taillessCount * RSA_DECRYPTED_BLOCK_SIZE;
                 final byte[] tailTmp = new byte[message.length - mass];
                 System.arraycopy(message, mass, tailTmp, 0, tailTmp.length);
-                System.arraycopy(cipher.doFinal(tailTmp),0, result, taillessCount * 256, 256);
+                System.arraycopy(cipher.doFinal(tailTmp),0, result, taillessCount * RSA_ENCRYPTED_BLOCK_SIZE, RSA_ENCRYPTED_BLOCK_SIZE);
 
                 return result;
             }
@@ -89,24 +93,24 @@ public class Recipe {
             final Cipher cipher = Cipher.getInstance(RSA);
             cipher.init(Cipher.DECRYPT_MODE, key);
 
-            if (message.length <= 256) {
+            if (message.length <= RSA_ENCRYPTED_BLOCK_SIZE) {
                 return cipher.doFinal(message);
             } else {
-                final int taillessCount = message.length / 256 - 1;
+                final int taillessCount = message.length / RSA_ENCRYPTED_BLOCK_SIZE - 1;
 
-                final byte[] taillessResult = new byte[taillessCount * 245];
+                final byte[] taillessResult = new byte[taillessCount * RSA_DECRYPTED_BLOCK_SIZE];
 
-                final byte[] tmp = new byte[256];
+                final byte[] tmp = new byte[RSA_ENCRYPTED_BLOCK_SIZE];
 
-                System.arraycopy(message, 0, tmp, 0, 256);
-                System.arraycopy(cipher.doFinal(tmp), 0, taillessResult, 0, 245);
+                System.arraycopy(message, 0, tmp, 0, RSA_ENCRYPTED_BLOCK_SIZE);
+                System.arraycopy(cipher.doFinal(tmp), 0, taillessResult, 0, RSA_DECRYPTED_BLOCK_SIZE);
 
                 for (int i = 1; i < taillessCount; i++) {
-                    System.arraycopy(message, i * 256, tmp, 0, 256);
-                    System.arraycopy(cipher.doFinal(tmp), 0, taillessResult, i * 245, 245);
+                    System.arraycopy(message, i * RSA_ENCRYPTED_BLOCK_SIZE, tmp, 0, RSA_ENCRYPTED_BLOCK_SIZE);
+                    System.arraycopy(cipher.doFinal(tmp), 0, taillessResult, i * RSA_DECRYPTED_BLOCK_SIZE, RSA_DECRYPTED_BLOCK_SIZE);
                 }
 
-                System.arraycopy(message, taillessCount * 256, tmp, 0,256);
+                System.arraycopy(message, taillessCount * RSA_ENCRYPTED_BLOCK_SIZE, tmp, 0,RSA_ENCRYPTED_BLOCK_SIZE);
 
                 final byte[] tail = cipher.doFinal(tmp);
 
@@ -122,11 +126,12 @@ public class Recipe {
         }
     }
 
+    public static final int AES_KEY_SIZE = 128;
+
     public static SecretKey generateAESKey() {
-        final int size = 128;
         try {
             KeyGenerator keyGenerator = KeyGenerator.getInstance(AES_SHORT);
-            keyGenerator.init(size);
+            keyGenerator.init(AES_KEY_SIZE);
             return keyGenerator.generateKey();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
